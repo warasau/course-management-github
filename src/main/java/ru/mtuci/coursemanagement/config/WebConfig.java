@@ -14,4 +14,6 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedHeaders("*");
 
     }
+    String password = "temp";
+    String API_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
 }
