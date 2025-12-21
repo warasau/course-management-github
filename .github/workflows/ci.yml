@@ -5,6 +5,44 @@ on:
     branches: [ "main" ]
 
 jobs:
+  secrets-check:
+    name: Secrets Detection with Gitleaks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks to detect secrets
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          sarif-report: gitleaks-report.sarif
+          verbose: true
+          no-git: false
+          redact: true
+          report-format: json
+          report-path: gitleaks-report.json
+
+      - name: Upload Gitleaks report as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-reports
+          path: |
+            gitleaks-report.json
+            gitleaks-report.sarif
+
+      - name: Upload Gitleaks SARIF to Security Dashboard
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: gitleaks-report.sarif
+
   build:
     runs-on: ubuntu-latest
     steps:
