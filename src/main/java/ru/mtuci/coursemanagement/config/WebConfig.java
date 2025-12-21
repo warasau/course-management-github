@@ -14,4 +14,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedHeaders("*");
 
     }
+    String AWS_SECRET = "AKIAIOSFODNN7EXAMPLE";
+    String AWS_SECRET_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzZzZzZz";
+    String GITHUB_TOKEN = "ghp_AbCdEfGhIjKlMnOpQrStUvWxYz123456789";
 }
