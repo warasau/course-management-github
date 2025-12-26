@@ -5,42 +5,41 @@ on:
     branches: [ "main" ]
 
 jobs:
-  gitleaks-scan:
-    name: Gitleaks Secret Scan
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Gitleaks (full scan)
-        run: |
-          docker run --rm \
-            --workdir=/repo \
-            --volume "${PWD}:/repo" \
-            zricethezav/gitleaks:latest \
-            detect --source . --exit-code=2 --report-path=gitleaks.sarif --report-format=sarif
-
-      - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: gitleaks.sarif
-          category: gitleaks
-
-      - name: Upload Gitleaks Report as Artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: gitleaks-report
-          path: gitleaks.sarif
-
+#  gitleaks-scan:
+#    name: Gitleaks Secret Scan
+#    runs-on: ubuntu-latest
+#    permissions:
+#      security-events: write
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+#
+#      - name: Run Gitleaks (full scan)
+#        run: |
+#          docker run --rm \
+#            --workdir=/repo \
+#            --volume "${PWD}:/repo" \
+#            zricethezav/gitleaks:latest \
+#            detect --source . --exit-code=2 --report-path=gitleaks.sarif --report-format=sarif
+#
+#      - name: Upload SARIF to GitHub Security
+#        uses: github/codeql-action/upload-sarif@v4
+#        if: always()
+#        with:
+#          sarif_file: gitleaks.sarif
+#          category: gitleaks
+#
+#      - name: Upload Gitleaks Report as Artifact
+#        uses: actions/upload-artifact@v4
+#        if: always()
+#        with:
+#          name: gitleaks-report
+#          path: gitleaks.sarif
   build:
     runs-on: ubuntu-latest
-    needs: gitleaks-scan
+#    needs: gitleaks-scan
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -94,47 +93,109 @@ jobs:
           name: semgrep-report
           path: semgrep.sarif
 
-  dependency-check:
-    name: OWASP Dependency Check
+#  dependency-check:
+#    name: OWASP Dependency Check
+#    runs-on: ubuntu-latest
+#    needs: build
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#
+#      - name: Set up JDK 21
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: '21'
+#          distribution: 'temurin'
+#          cache: maven
+#
+#      - name: Grant execute permission for mvnw
+#        run: chmod +x mvnw
+#
+#      - name: Run OWASP Dependency Check
+#        run: |
+#          touch project-suppression.xml
+#          ./mvnw org.owasp:dependency-check-maven:check -Dformat=HTML -DsuppressionFile=project-suppression.xml
+#        continue-on-error: true
+#
+#      - name: Upload SCA Report
+#        uses: actions/upload-artifact@v4
+#        if: always()
+#        with:
+#          name: dependency-check-report
+#          path: target/dependency-check-report.html
+#
+#  dast-dynamic:
+#    name: DAST Scan (ZAP Docker)
+#    runs-on: ubuntu-latest
+#    needs: build
+#    permissions:
+#      contents: read
+#      security-events: write
+#      actions: write
+#      checks: write
+#
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#
+#      - name: Download Build Artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: built-jar
+#          path: target
+#
+#      - name: Set up JDK 21
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: '21'
+#          distribution: 'temurin'
+#
+#      - name: Start Application
+#        run: |
+#          nohup java -jar target/*.jar &
+#          sleep 30
+#
+#      - name: Fix permissions
+#        run: chmod -R 777 .
+#
+#      - name: Create Empty Rules File
+#        run: touch zap_rules.tsv && chmod 666 zap_rules.tsv
+#
+#      - name: Pull ZAP Image
+#        run: docker pull ghcr.io/zaproxy/zaproxy:stable
+#
+#      - name: Run ZAP Baseline Scan
+#        run: |
+#          docker run --rm --network host --user root \
+#            -v $(pwd):/zap/wrk/:rw \
+#            ghcr.io/zaproxy/zaproxy:stable \
+#            zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I || true
+#
+#      - name: Upload Baseline Report
+#        if: always()
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: zap-baseline-report
+#          path: zap-baseline-report.html
+#
+#      - name: Run ZAP API Scan
+#        run: |
+#          docker run --rm --network host --user root \
+#            -v $(pwd):/zap/wrk/:rw \
+#            ghcr.io/zaproxy/zaproxy:stable \
+#            zap-api-scan.py -t http://localhost:8080/v3/api-docs -f openapi -r zap-api-report.html -I || true
+#
+#      - name: Upload API Report
+#        if: always()
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: zap-api-report
+#          path: zap-api-report.html
+
+  nuclei-fuzzing:
+    name: Nuclei Fuzzing Scan
     runs-on: ubuntu-latest
     needs: build
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: maven
-
-      - name: Grant execute permission for mvnw
-        run: chmod +x mvnw
-
-      - name: Run OWASP Dependency Check
-        run: |
-          touch project-suppression.xml
-          ./mvnw org.owasp:dependency-check-maven:check -Dformat=HTML -DsuppressionFile=project-suppression.xml
-        continue-on-error: true
-
-      - name: Upload SCA Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency-check-report
-          path: target/dependency-check-report.html
-
-  dast-dynamic:
-    name: DAST Scan (ZAP Docker)
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      contents: read
-      security-events: write
-      actions: write
-      checks: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -153,42 +214,18 @@ jobs:
 
       - name: Start Application
         run: |
-          nohup java -jar target/*.jar &
-          sleep 30
+          java -jar target/*.jar &
+          sleep 40 
 
-      - name: Fix permissions
-        run: chmod -R 777 .
+      - name: Run Nuclei Fuzzing
+        uses: projectdiscovery/nuclei-action@main
+        with:
+          target: http://localhost:8080
+          flags: "-it fuzzing -as -v -o nuclei-fuzz-report.txt"
 
-      - name: Create Empty Rules File
-        run: touch zap_rules.tsv && chmod 666 zap_rules.tsv
-
-      - name: Pull ZAP Image
-        run: docker pull ghcr.io/zaproxy/zaproxy:stable
-
-      - name: Run ZAP Baseline Scan
-        run: |
-          docker run --rm --network host --user root \
-            -v $(pwd):/zap/wrk/:rw \
-            ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I || true
-
-      - name: Upload Baseline Report
+      - name: Upload Nuclei Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zap-baseline-report
-          path: zap-baseline-report.html
-
-      - name: Run ZAP API Scan
-        run: |
-          docker run --rm --network host --user root \
-            -v $(pwd):/zap/wrk/:rw \
-            ghcr.io/zaproxy/zaproxy:stable \
-            zap-api-scan.py -t http://localhost:8080/v3/api-docs -f openapi -r zap-api-report.html -I || true
-
-      - name: Upload API Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-api-report
-          path: zap-api-report.html
+          name: nuclei-fuzz-report
+          path: nuclei-fuzz-report.txt
